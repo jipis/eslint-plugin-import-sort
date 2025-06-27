@@ -43,16 +43,14 @@ function compareImports(a, b) {
 
   const nameA = getFirstName(a);
   const nameB = getFirstName(b);
-  return nameA.localeCompare(nameB, undefined, { sensitivity: "case" });
+  return nameA.localeCompare(nameB, undefined, { sensitivity: "variant" });
 }
 
 function sortSpecifiers(specs) {
-  return [...specs].sort((a, b) => a.local.name.localeCompare(b.local.name, undefined, { sensitivity: "case" }));
+  return [...specs].sort((a, b) => a.local.name.localeCompare(b.local.name, undefined, { sensitivity: "variant" }));
 }
 
-function generateImportText(node, sourceCode) {
-  const sortedSpecs = sortSpecifiers(node.specifiers);
-
+function generateImportText(node, sortedSpecs) {
   if (sortedSpecs.length === 0) {
     return `import '${node.source.value}';`;
   }
@@ -71,7 +69,7 @@ function generateImportText(node, sourceCode) {
     const defaultSpec = sortedSpecs.find(s => s.type === "ImportDefaultSpecifier");
     const namespaceSpec = sortedSpecs.find(s => s.type === "ImportNamespaceSpecifier");
     const namedSpecs = sortSpecifiers(sortedSpecs.filter(s => s.type === "ImportSpecifier"))
-      .map(s => sourceCode.getText(s))
+      .map(s => s.local.name)
       .join(", ");
 
     const clauses = [];
@@ -98,6 +96,28 @@ module.exports = {
     const internalDirs = getInternalDirs();
 
     return {
+      ImportDeclaration(node) {
+        const specifiers = node.specifiers;
+        if (specifiers.length <= 1) return;
+
+        const namedSpecs = specifiers.filter(s => s.type === "ImportSpecifier");
+        const sortedNamed = sortSpecifiers(namedSpecs);
+
+        const currentNamed = namedSpecs.map(s => s.local.name).join(",");
+        const expectedNamed = sortedNamed.map(s => s.local.name).join(",");
+
+        if (currentNamed !== expectedNamed) {
+          context.report({
+            node,
+            message: "Named import specifiers are not sorted alphabetically.",
+            fix(fixer) {
+              const sorted = sortSpecifiers(specifiers);
+              return fixer.replaceText(node, generateImportText(node, sorted));
+            },
+          });
+        }
+      },
+
       Program(programNode) {
         const importNodes = programNode.body.filter(n => n.type === "ImportDeclaration");
 
@@ -141,10 +161,8 @@ module.exports = {
           sorted.pop();
         }
 
-        const sourceCode = context.getSourceCode();
-        const expected = sorted.map(node => node === "BLANK_LINE" ? "\n" : generateImportText(node, sourceCode));
-
-        const actual = importNodes.map(node => generateImportText(node, sourceCode));
+        const expected = sorted.map(node => node === "BLANK_LINE" ? "\n" : generateImportText(node, sortSpecifiers(node.specifiers)));
+        const actual = importNodes.map(node => context.getSourceCode().getText(node));
 
         if (expected.join("\n") !== actual.join("\n")) {
           context.report({
