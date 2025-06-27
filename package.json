@@ -1,8 +1,7 @@
 {
   "name": "@jipis/eslint-plugin-import-sort",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A highly-opinionated ESLint plugin to enforce a strict custom sorting order of `import` statements across four clearly defined sections.",
-  "main": "rules/custom-import-sort.js",
   "keywords": [
     "eslint",
     "eslintplugin",
@@ -15,7 +14,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jipis/eslint-plugin-import-sort.git"
+    "url": "git+https://github.com/jipis/eslint-plugin-import-sort.git"
   },
   "peerDependencies": {
     "eslint": ">=7"

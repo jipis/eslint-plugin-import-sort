@@ -111,10 +111,34 @@ module.exports = {
           if (node === "BLANK_LINE") return "\n";
 
           const sortedSpecs = sortSpecifiers(node.specifiers);
-          const specText = sortedSpecs.map(s => sourceCode.getText(s)).join(", ");
-          const keyword = "import";
-          const from = `from '${node.source.value}';`;
-          return `${keyword} ${specText.length ? `{ ${specText} } ` : ""}${from}`;
+
+          let importClause;
+          if (sortedSpecs.length === 1) {
+            const spec = sortedSpecs[0];
+            if (spec.type === "ImportSpecifier") {
+              importClause = `{ ${spec.local.name} }`;
+            } else if (spec.type === "ImportNamespaceSpecifier") {
+              importClause = `* as ${spec.local.name}`;
+            } else if (spec.type === "ImportDefaultSpecifier") {
+              importClause = `${spec.local.name}`;
+            }
+          } else {
+            const namedSpecs = sortedSpecs
+              .filter(s => s.type === "ImportSpecifier")
+              .map(s => sourceCode.getText(s))
+              .join(", ");
+            const defaultSpec = sortedSpecs.find(s => s.type === "ImportDefaultSpecifier");
+            const namespaceSpec = sortedSpecs.find(s => s.type === "ImportNamespaceSpecifier");
+
+            const clauses = [];
+            if (defaultSpec) clauses.push(defaultSpec.local.name);
+            if (namespaceSpec) clauses.push(`* as ${namespaceSpec.local.name}`);
+            if (namedSpecs) clauses.push(`{ ${namedSpecs} }`);
+
+            importClause = clauses.join(", ");
+          }
+
+          return `import ${importClause} from '${node.source.value}';`;
         });
 
         const actualText = importNodes.map(n => sourceCode.getText(n)).join("\n");
