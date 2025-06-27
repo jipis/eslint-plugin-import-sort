@@ -31,8 +31,8 @@ function getImportGroupKey(node) {
 
 function getFirstName(node) {
   if (node.specifiers.length === 0) return "~";
-  const s = node.specifiers[0];
-  return s.local.name;
+  const sortedSpecs = sortSpecifiers(node.specifiers);
+  return sortedSpecs[0].local.name;
 }
 
 function compareImports(a, b) {
@@ -42,15 +42,11 @@ function compareImports(a, b) {
 
   const nameA = getFirstName(a);
   const nameB = getFirstName(b);
-  return nameA.localeCompare(nameB);
+  return nameA.localeCompare(nameB, undefined, { sensitivity: "case" });
 }
 
 function sortSpecifiers(specs) {
-  return [...specs].sort((a, b) => {
-    const nameA = a.local.name;
-    const nameB = b.local.name;
-    return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
-  });
+  return [...specs].sort((a, b) => a.local.name.localeCompare(b.local.name, undefined, { sensitivity: "case" }));
 }
 
 module.exports = {
@@ -129,8 +125,7 @@ module.exports = {
           } else {
             const defaultSpec = sortedSpecs.find(s => s.type === "ImportDefaultSpecifier");
             const namespaceSpec = sortedSpecs.find(s => s.type === "ImportNamespaceSpecifier");
-            const namedSpecs = sortedSpecs
-              .filter(s => s.type === "ImportSpecifier")
+            const namedSpecs = sortSpecifiers(sortedSpecs.filter(s => s.type === "ImportSpecifier"))
               .map(s => sourceCode.getText(s))
               .join(", ");
 
