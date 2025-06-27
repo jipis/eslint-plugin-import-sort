@@ -22,7 +22,8 @@ function getImportType(source, internalDirs) {
 
 function getImportGroupKey(node) {
   if (node.specifiers.length === 0) return "~"; // side-effect imports last
-  const firstSpecifier = node.specifiers[0];
+  const sortedSpecs = sortSpecifiers(node.specifiers);
+  const firstSpecifier = sortedSpecs[0];
   if (firstSpecifier.type === "ImportSpecifier") return "1"; // named
   if (firstSpecifier.type === "ImportNamespaceSpecifier") return "2"; // namespace
   if (firstSpecifier.type === "ImportDefaultSpecifier") return "3"; // default
@@ -47,6 +48,41 @@ function compareImports(a, b) {
 
 function sortSpecifiers(specs) {
   return [...specs].sort((a, b) => a.local.name.localeCompare(b.local.name, undefined, { sensitivity: "case" }));
+}
+
+function generateImportText(node, sourceCode) {
+  const sortedSpecs = sortSpecifiers(node.specifiers);
+
+  if (sortedSpecs.length === 0) {
+    return `import '${node.source.value}';`;
+  }
+
+  let importClause;
+  if (sortedSpecs.length === 1) {
+    const spec = sortedSpecs[0];
+    if (spec.type === "ImportSpecifier") {
+      importClause = `{ ${spec.local.name} }`;
+    } else if (spec.type === "ImportNamespaceSpecifier") {
+      importClause = `* as ${spec.local.name}`;
+    } else if (spec.type === "ImportDefaultSpecifier") {
+      importClause = `${spec.local.name}`;
+    }
+  } else {
+    const defaultSpec = sortedSpecs.find(s => s.type === "ImportDefaultSpecifier");
+    const namespaceSpec = sortedSpecs.find(s => s.type === "ImportNamespaceSpecifier");
+    const namedSpecs = sortSpecifiers(sortedSpecs.filter(s => s.type === "ImportSpecifier"))
+      .map(s => sourceCode.getText(s))
+      .join(", ");
+
+    const clauses = [];
+    if (defaultSpec) clauses.push(defaultSpec.local.name);
+    if (namespaceSpec) clauses.push(`* as ${namespaceSpec.local.name}`);
+    if (namedSpecs) clauses.push(`{ ${namedSpecs} }`);
+
+    importClause = clauses.join(", ");
+  }
+
+  return `import ${importClause} from '${node.source.value}';`;
 }
 
 module.exports = {
@@ -101,48 +137,16 @@ module.exports = {
           sorted.push(...stylesSorted);
         }
 
-        // Remove trailing blank lines
         while (sorted.length && sorted[sorted.length - 1] === "BLANK_LINE") {
           sorted.pop();
         }
 
         const sourceCode = context.getSourceCode();
-        const expected = sorted.map(node => {
-          if (node === "BLANK_LINE") return "\n";
+        const expected = sorted.map(node => node === "BLANK_LINE" ? "\n" : generateImportText(node, sourceCode));
 
-          const sortedSpecs = sortSpecifiers(node.specifiers);
+        const actual = importNodes.map(node => generateImportText(node, sourceCode));
 
-          let importClause;
-          if (sortedSpecs.length === 1) {
-            const spec = sortedSpecs[0];
-            if (spec.type === "ImportSpecifier") {
-              importClause = `{ ${spec.local.name} }`;
-            } else if (spec.type === "ImportNamespaceSpecifier") {
-              importClause = `* as ${spec.local.name}`;
-            } else if (spec.type === "ImportDefaultSpecifier") {
-              importClause = `${spec.local.name}`;
-            }
-          } else {
-            const defaultSpec = sortedSpecs.find(s => s.type === "ImportDefaultSpecifier");
-            const namespaceSpec = sortedSpecs.find(s => s.type === "ImportNamespaceSpecifier");
-            const namedSpecs = sortSpecifiers(sortedSpecs.filter(s => s.type === "ImportSpecifier"))
-              .map(s => sourceCode.getText(s))
-              .join(", ");
-
-            const clauses = [];
-            if (defaultSpec) clauses.push(defaultSpec.local.name);
-            if (namespaceSpec) clauses.push(`* as ${namespaceSpec.local.name}`);
-            if (namedSpecs) clauses.push(`{ ${namedSpecs} }`);
-
-            importClause = clauses.join(", ");
-          }
-
-          return `import ${importClause} from '${node.source.value}';`;
-        });
-
-        const actualText = importNodes.map(n => sourceCode.getText(n)).join("\n");
-
-        if (expected.join("\n") !== actualText) {
+        if (expected.join("\n") !== actual.join("\n")) {
           context.report({
             node: importNodes[0],
             message: "Imports are not sorted correctly.",
