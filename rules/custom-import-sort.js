@@ -98,7 +98,8 @@ module.exports = {
     return {
       ImportDeclaration(node) {
         const specifiers = node.specifiers;
-        if (specifiers.length <= 1) return;
+        const namedSpecs = specifiers.filter(s => s.type === "ImportSpecifier");
+        if (namedSpecs.length <= 1) return;
 
         const namedSpecs = specifiers.filter(s => s.type === "ImportSpecifier");
         const sortedNamed = sortSpecifiers(namedSpecs);
@@ -161,7 +162,8 @@ module.exports = {
           sorted.pop();
         }
 
-        const expected = sorted.map(node => node === "BLANK_LINE" ? "\n" : generateImportText(node, sortSpecifiers(node.specifiers)));
+        const expected = sorted.map(node => node === "BLANK_LINE" ? "
+" : generateImportText(node, node.specifiers));
         const actual = importNodes.map(node => context.getSourceCode().getText(node));
 
         if (expected.join("\n") !== actual.join("\n")) {
