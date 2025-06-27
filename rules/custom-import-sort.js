@@ -46,7 +46,11 @@ function compareImports(a, b) {
 }
 
 function sortSpecifiers(specs) {
-  return [...specs].sort((a, b) => a.local.name.localeCompare(b.local.name));
+  return [...specs].sort((a, b) => {
+    const nameA = a.local.name;
+    const nameB = b.local.name;
+    return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
+  });
 }
 
 module.exports = {
@@ -123,12 +127,12 @@ module.exports = {
               importClause = `${spec.local.name}`;
             }
           } else {
+            const defaultSpec = sortedSpecs.find(s => s.type === "ImportDefaultSpecifier");
+            const namespaceSpec = sortedSpecs.find(s => s.type === "ImportNamespaceSpecifier");
             const namedSpecs = sortedSpecs
               .filter(s => s.type === "ImportSpecifier")
               .map(s => sourceCode.getText(s))
               .join(", ");
-            const defaultSpec = sortedSpecs.find(s => s.type === "ImportDefaultSpecifier");
-            const namespaceSpec = sortedSpecs.find(s => s.type === "ImportNamespaceSpecifier");
 
             const clauses = [];
             if (defaultSpec) clauses.push(defaultSpec.local.name);
