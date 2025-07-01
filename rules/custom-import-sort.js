@@ -43,11 +43,15 @@ function compareImports(a, b) {
 
   const nameA = getFirstName(a);
   const nameB = getFirstName(b);
-  return nameA.localeCompare(nameB, undefined, { sensitivity: "variant" });
+  return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
 }
 
 function sortSpecifiers(specs) {
-  return [...specs].sort((a, b) => a.local.name.localeCompare(b.local.name, undefined, { sensitivity: "variant" }));
+  return [...specs].sort((a, b) => {
+    if (a.local.name < b.local.name) return -1;
+    if (a.local.name > b.local.name) return 1;
+    return 0;
+  });
 }
 
 function generateImportText(node, sortedSpecs) {
@@ -101,7 +105,6 @@ module.exports = {
         const namedSpecs = specifiers.filter(s => s.type === "ImportSpecifier");
         if (namedSpecs.length <= 1) return;
 
-        const namedSpecs = specifiers.filter(s => s.type === "ImportSpecifier");
         const sortedNamed = sortSpecifiers(namedSpecs);
 
         const currentNamed = namedSpecs.map(s => s.local.name).join(",");
@@ -162,18 +165,25 @@ module.exports = {
           sorted.pop();
         }
 
-        const expected = sorted.map(node => node === "BLANK_LINE" ? "
-" : generateImportText(node, node.specifiers));
-        const actual = importNodes.map(node => context.getSourceCode().getText(node));
+        const expectedText = sorted
+          .map(node => node === "BLANK_LINE" ? "\n" : generateImportText(node, node.specifiers))
+          .join("\n")
+          .replace(/\n{2,}/g, "\n\n")
+          .trim();
+        const actualText = importNodes
+          .map(node => context.getSourceCode().getText(node))
+          .join("\n")
+          .replace(/\n{2,}/g, "\n\n")
+          .trim();
 
-        if (expected.join("\n") !== actual.join("\n")) {
+        if (expectedText !== actualText) {
           context.report({
             node: importNodes[0],
             message: "Imports are not sorted correctly.",
             fix(fixer) {
               return fixer.replaceTextRange(
                 [importNodes[0].range[0], importNodes[importNodes.length - 1].range[1]],
-                expected.join("\n").replace(/\n{2,}/g, "\n\n")
+                expectedText
               );
             },
           });
@@ -182,4 +192,3 @@ module.exports = {
     };
   },
 };
-
