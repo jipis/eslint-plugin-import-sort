@@ -209,12 +209,21 @@ module.exports = {
             node: importNodes[0],
             message: 'Imports are not sorted correctly.',
             fix(fixer) {
+              const fixedText = sorted
+                .map((node) =>
+                  node === 'BLANK_LINE'
+                    ? '\n'
+                    : generateImportText(node)
+                )
+                .join('\n')
+                .replace(/\n{2,}/g, '\n\n');
+
               return fixer.replaceTextRange(
                 [
                   importNodes[0].range[0],
                   importNodes[importNodes.length - 1].range[1],
                 ],
-                expectedText
+                fixedText
               );
             },
           });
