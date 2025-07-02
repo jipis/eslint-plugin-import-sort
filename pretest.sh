@@ -6,6 +6,7 @@ SUBDIRS="components internal types utils"
 
 if [ -d "$DIR" ] ; then
   echo "Error: Testing dirs directory '$DIR' exists. Please delete it before running tests."
+  echo "This can be done by running 'npm run posttest' if you're sure that the directory is safe to delete."
   exit 1
 fi
 

@@ -1,6 +1,6 @@
 {
   "name": "@jipis/eslint-plugin-import-sort",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "A highly-opinionated ESLint plugin to enforce a strict custom sorting order of `import` statements across four clearly defined sections.",
   "scripts": {
     "pretest": "./pretest.sh",
