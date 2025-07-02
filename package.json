@@ -2,6 +2,11 @@
   "name": "@jipis/eslint-plugin-import-sort",
   "version": "0.1.5",
   "description": "A highly-opinionated ESLint plugin to enforce a strict custom sorting order of `import` statements across four clearly defined sections.",
+  "scripts": {
+    "pretest": "./pretest.sh",
+    "test": "mocha tests/custom-import-sort.test.js",
+    "posttest": "./posttest.sh"
+  },
   "keywords": [
     "eslint",
     "eslintplugin",
@@ -17,9 +22,15 @@
     "url": "git+https://github.com/jipis/eslint-plugin-import-sort.git"
   },
   "peerDependencies": {
-    "eslint": ">=7"
+    "eslint": "^9.30.1"
   },
   "engines": {
     "node": ">=14"
+  },
+  "devDependencies": {
+    "eslint": "^9.30.1",
+    "eslint-plugin-mocha": "^11.1.0",
+    "eslint-rule-tester": "^2.0.0",
+    "mocha": "^11.7.1"
   }
 }
