@@ -105,7 +105,6 @@ module.exports = {
       description:
         'Strict import sorting grouped by type and format.',
     },
-    defaultOptions: [{ srcDir: 'src' }],
     schema: [
       {
         type: 'object',
@@ -117,7 +116,7 @@ module.exports = {
     ],
   },
   create(context) {
-    const [{ srcDir }] = context.options;
+    const srcDir = context.options?.[0]?.srcDir ?? 'src';
     const internalDirs = getInternalDirs(srcDir);
 
     return {
